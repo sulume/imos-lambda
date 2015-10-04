@@ -10,7 +10,7 @@ function removeRecursively(directory) {
   var files = fs.readdirSync(directory);
   for (var i = 0; i < files.length; i++) {
     var full_path = path.join(directory, files[i]);
-    if (files[i] === '.' || files[i] === '..') {
+    if (files[i] == '.' || files[i] == '..') {
       continue;
     }
 
@@ -52,15 +52,15 @@ function initializeContext(context) {
     if (!context.onFinalize()) {
       return;
     }
-    console.log("Error code: " + error.code + ", error: " + error);
-    context.done(error, "lambda");
+    console.log('Error code: ' + error.code + ', error: ' + error);
+    context.done(error, 'lambda');
   };
 
   context.onSuccess = function(error) {
     if (!context.onFinalize()) {
       return;
     }
-    context.response["elapsed_time"] =
+    context.response['elapsed_time'] =
         (new Date()).getTime() - context.response.start_time;
     context.succeed(context.response);
   };
@@ -72,11 +72,11 @@ function initialize(event, context) {
     removeRecursively(context.root);
   });
 
-  fs.mkdirSync(context.root + "/home");
-  fs.mkdirSync(context.root + "/tmp");
+  fs.mkdirSync(context.root + '/home');
+  fs.mkdirSync(context.root + '/tmp');
 
-  var input_file = context.root + "/home/input";
-  if ("input" in event && event.input !== null) {
+  var input_file = context.root + '/home/input';
+  if (event.input) {
     fs.writeFileSync(input_file, event.input);
   } else {
     try {
@@ -89,7 +89,7 @@ function initialize(event, context) {
 
 function runCommand(event, context, callback) {
   var command = '';
-  if ('command' in event && event.command != null && event.command !== '') {
+  if (event.command) {
     command = event.command;
   } else {
     if (!fs.existsSync(context.functionName)) {
@@ -98,23 +98,21 @@ function runCommand(event, context, callback) {
     }
     command = './' + context.functionName;
   }
+  if (event.arguments) {
+    command += ' ' + event.arguments;
+  }
   var env = {};
   for (var i in process.env) env[i] = process.env[i];
-  if ("replicas" in event && event.replicas != null && event.replicas !== '') {
+  if (event.replicas) {
     env['IMOS_LAMBDA_REPLICAS'] = event.replicas;
   }
-  if ("replica_index" in event && event.replica_index != null &&
-      event.replica_index !== '') {
+  if (event.replica_index) {
     env['IMOS_LAMBDA_REPLICA_INDEX'] = event.replica_index;
   }
-  if ("arguments" in event && event.arguments != null &&
-      event.arguments !== '') {
-    command += " " + event.arguments;
-  }
-  env['TMPDIR'] = context.root + "/tmp";
-  env['HOME'] = context.root + "/home";
+  env['TMPDIR'] = context.root + '/tmp';
+  env['HOME'] = context.root + '/home';
   env['REQUEST_ID'] = context.awsRequestId;
-  console.log("Executing: " + command);
+  console.log('Executing: ' + command);
   exec(command, {env: env}, function(error, stdout, stderr) {
     if (error) {
       context.response.code = error.code;
@@ -135,25 +133,23 @@ function runCommand(event, context, callback) {
             callback(error);
           });
     } else {
-      callback(null);
+      callback();
     }
   });
 }
-
 function getObject(event, context, callback) {
-  if ("object" in event && event.object !== null && event.object !== "" &&
-      "bucket" in event && event.bucket !== null && event.bucket !== "") {
+  if (event.object && event.bucket) {
     s3.getObject(
         {Bucket: event.bucket,
          Key: event.object},
         function(error, data) {
           if (!error) {
-            fs.writeFileSync(context.root + "/home/object", data.Body);
+            fs.writeFileSync(context.root + '/home/object', data.Body);
           }
           callback(error);
         });
   } else {
-    callback(null);
+    callback();
   }
 }
 
