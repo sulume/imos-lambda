@@ -98,27 +98,24 @@ function runCommand(event, context, callback) {
     }
     command = './' + context.functionName;
   }
-  var exports = '';
+  var env = {};
+  for (var i in process.env) env[i] = process.env[i];
   if ("replicas" in event && event.replicas != null && event.replicas !== '') {
-    exports += "export IMOS_LAMBDA_REPLICAS=" + parseInt(event.replicas) + "; ";
+    env['IMOS_LAMBDA_REPLICAS'] = event.replicas;
   }
   if ("replica_index" in event && event.replica_index != null &&
       event.replica_index !== '') {
-    exports += "export IMOS_LAMBDA_REPLICA_INDEX=" +
-               parseInt(event.replica_index) + "; ";
+    env['IMOS_LAMBDA_REPLICA_INDEX'] = event.replica_index;
   }
   if ("arguments" in event && event.arguments != null &&
       event.arguments !== '') {
     command += " " + event.arguments;
   }
-  var command =
-      exports +
-      "export TMPDIR='" + context.root + "/tmp'; " +
-      "export HOME='" + context.root + "/home'; " +
-      "export REQUEST_ID='" + context.awsRequestId + "'; " +
-      command;
+  env['TMPDIR'] = context.root + "/tmp";
+  env['HOME'] = context.root + "/home";
+  env['REQUEST_ID'] = context.awsRequestId;
   console.log("Executing: " + command);
-  exec(command, function(error, stdout, stderr) {
+  exec(command, {env: env}, function(error, stdout, stderr) {
     if (error) {
       context.response.code = error.code;
       context.response.signal = error.signal;
